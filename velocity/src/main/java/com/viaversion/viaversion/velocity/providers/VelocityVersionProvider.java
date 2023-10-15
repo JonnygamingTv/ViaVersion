@@ -1,6 +1,6 @@
 /*
  * This file is part of ViaVersion - https://github.com/ViaVersion/ViaVersion
- * Copyright (C) 2016-2022 ViaVersion and contributors
+ * Copyright (C) 2016-2023 ViaVersion and contributors
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,21 +24,21 @@ import com.viaversion.viaversion.api.connection.UserConnection;
 import com.viaversion.viaversion.api.protocol.version.ProtocolVersion;
 import com.viaversion.viaversion.protocols.base.BaseVersionProvider;
 import com.viaversion.viaversion.velocity.platform.VelocityViaInjector;
-import com.viaversion.viaversion.velocity.service.ProtocolDetectorService;
 import io.netty.channel.ChannelHandler;
-
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.stream.IntStream;
+import org.jetbrains.annotations.Nullable;
 
 public class VelocityVersionProvider extends BaseVersionProvider {
-    private static Method getAssociation;
+    private static final Method GET_ASSOCIATION = getAssociationMethod();
 
-    static {
+    private static @Nullable Method getAssociationMethod() {
         try {
-            getAssociation = Class.forName("com.velocitypowered.proxy.connection.MinecraftConnection").getMethod("getAssociation");
+            return Class.forName("com.velocitypowered.proxy.connection.MinecraftConnection").getMethod("getAssociation");
         } catch (NoSuchMethodException | ClassNotFoundException e) {
             e.printStackTrace();
+            return null;
         }
     }
 
@@ -50,8 +50,8 @@ public class VelocityVersionProvider extends BaseVersionProvider {
     private int getBackProtocol(UserConnection user) throws Exception {
         //TODO use newly added Velocity netty event
         ChannelHandler mcHandler = user.getChannel().pipeline().get("handler");
-        return ProtocolDetectorService.getProtocolId(
-                ((ServerConnection) getAssociation.invoke(mcHandler)).getServerInfo().getName());
+        ServerConnection serverConnection = (ServerConnection) GET_ASSOCIATION.invoke(mcHandler);
+        return Via.proxyPlatform().protocolDetectorService().serverProtocolVersion(serverConnection.getServerInfo().getName());
     }
 
     private int getFrontProtocol(UserConnection user) throws Exception {
@@ -61,30 +61,32 @@ public class VelocityVersionProvider extends BaseVersionProvider {
                 .mapToInt(com.velocitypowered.api.network.ProtocolVersion::getProtocol);
 
         // Modern forwarding mode needs 1.13 Login plugin message
-        if (VelocityViaInjector.getPlayerInfoForwardingMode != null
-                && ((Enum<?>) VelocityViaInjector.getPlayerInfoForwardingMode.invoke(VelocityPlugin.PROXY.getConfiguration()))
+        if (VelocityViaInjector.GET_PLAYER_INFO_FORWARDING_MODE != null
+                && ((Enum<?>) VelocityViaInjector.GET_PLAYER_INFO_FORWARDING_MODE.invoke(VelocityPlugin.PROXY.getConfiguration()))
                 .name().equals("MODERN")) {
             versions = versions.filter(ver -> ver >= ProtocolVersion.v1_13.getVersion());
         }
         int[] compatibleProtocols = versions.toArray();
 
-        // Bungee supports it
-        if (Arrays.binarySearch(compatibleProtocols, playerVersion) >= 0)
+        if (Arrays.binarySearch(compatibleProtocols, playerVersion) >= 0) {
+            // Velocity supports it
             return playerVersion;
+        }
 
-        // Older than bungee supports, get the lowest version
         if (playerVersion < compatibleProtocols[0]) {
+            // Older than Velocity supports, get the lowest version
             return compatibleProtocols[0];
         }
 
-        // Loop through all protocols to get the closest protocol id that bungee supports (and that viaversion does too)
+        // Loop through all protocols to get the closest protocol id that Velocity supports (and that Via does too)
 
         // TODO: This needs a better fix, i.e checking ProtocolRegistry to see if it would work.
-        // This is more of a workaround for snapshot support by bungee.
+        // This is more of a workaround for snapshot support
         for (int i = compatibleProtocols.length - 1; i >= 0; i--) {
             int protocol = compatibleProtocols[i];
-            if (playerVersion > protocol && ProtocolVersion.isRegistered(protocol))
+            if (playerVersion > protocol && ProtocolVersion.isRegistered(protocol)) {
                 return protocol;
+            }
         }
 
         Via.getPlatform().getLogger().severe("Panic, no protocol id found for " + playerVersion);

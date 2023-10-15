@@ -1,6 +1,6 @@
 /*
  * This file is part of ViaVersion - https://github.com/ViaVersion/ViaVersion
- * Copyright (C) 2016-2022 ViaVersion and contributors
+ * Copyright (C) 2016-2023 ViaVersion and contributors
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -30,6 +30,7 @@ import com.viaversion.viaversion.api.platform.providers.ViaProviders;
 import com.viaversion.viaversion.api.protocol.ProtocolManager;
 import com.viaversion.viaversion.api.protocol.version.ProtocolVersion;
 import com.viaversion.viaversion.api.protocol.version.ServerProtocolVersion;
+import com.viaversion.viaversion.api.scheduler.Scheduler;
 import com.viaversion.viaversion.commands.ViaCommandHandler;
 import com.viaversion.viaversion.connection.ConnectionManagerImpl;
 import com.viaversion.viaversion.debug.DebugHandlerImpl;
@@ -38,9 +39,9 @@ import com.viaversion.viaversion.protocol.ServerProtocolVersionRange;
 import com.viaversion.viaversion.protocol.ServerProtocolVersionSingleton;
 import com.viaversion.viaversion.protocols.protocol1_13to1_12_2.TabCompleteThread;
 import com.viaversion.viaversion.protocols.protocol1_9to1_8.ViaIdleThread;
+import com.viaversion.viaversion.scheduler.TaskScheduler;
 import com.viaversion.viaversion.update.UpdateUtil;
 import it.unimi.dsi.fastutil.ints.IntSortedSet;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -54,14 +55,15 @@ public class ViaManagerImpl implements ViaManager {
     private final ConnectionManager connectionManager = new ConnectionManagerImpl();
     private final DebugHandler debugHandler = new DebugHandlerImpl();
     private final ViaProviders providers = new ViaProviders();
+    private final Scheduler scheduler = new TaskScheduler();
     private final ViaPlatform<?> platform;
     private final ViaInjector injector;
     private final ViaCommandHandler commandHandler;
     private final ViaPlatformLoader loader;
     private final Set<String> subPlatforms = new HashSet<>();
     private List<Runnable> enableListeners = new ArrayList<>();
-    private PlatformTask mappingLoadingTask;
-    private boolean debug;
+    private PlatformTask<?> mappingLoadingTask;
+    private boolean initialized;
 
     public ViaManagerImpl(ViaPlatform<?> platform, ViaInjector injector, ViaCommandHandler commandHandler, ViaPlatformLoader loader) {
         this.platform = platform;
@@ -78,10 +80,6 @@ public class ViaManagerImpl implements ViaManager {
         if (System.getProperty("ViaVersion") != null) {
             // Reload?
             platform.onReload();
-        }
-        // Check for updates
-        if (platform.getConf().isCheckForUpdates()) {
-            UpdateUtil.sendUpdateMessage();
         }
 
         // Load supported protocol versions if we can
@@ -109,11 +107,15 @@ public class ViaManagerImpl implements ViaManager {
         }
         enableListeners = null;
 
-        // If successful
-        platform.runSync(this::onServerLoaded);
+        initialized = true;
     }
 
     public void onServerLoaded() {
+        // Check for updates
+        if (platform.getConf().isCheckForUpdates()) {
+            UpdateUtil.sendUpdateMessage();
+        }
+
         if (!protocolManager.getServerProtocolVersion().isKnown()) {
             // Try again
             loadServerProtocol();
@@ -125,7 +127,7 @@ public class ViaManagerImpl implements ViaManager {
             if (platform.isProxy()) {
                 platform.getLogger().info("ViaVersion detected lowest supported version by the proxy: " + ProtocolVersion.getProtocol(protocolVersion.lowestSupportedVersion()));
                 platform.getLogger().info("Highest supported version by the proxy: " + ProtocolVersion.getProtocol(protocolVersion.highestSupportedVersion()));
-                if (debug) {
+                if (debugHandler.enabled()) {
                     platform.getLogger().info("Supported version range: " + Arrays.toString(protocolVersion.supportedVersions().toArray(new int[0])));
                 }
             } else {
@@ -150,14 +152,11 @@ public class ViaManagerImpl implements ViaManager {
         // Check for unsupported plugins/software
         unsupportedSoftwareWarning();
 
-        // Load Listeners / Tasks
-        protocolManager.onServerLoaded();
-
         // Load Platform
         loader.load();
         // Common tasks
-        mappingLoadingTask = Via.getPlatform().runRepeatingSync(() -> {
-            if (protocolManager.checkForMappingCompletion()) {
+        mappingLoadingTask = Via.getPlatform().runRepeatingAsync(() -> {
+            if (protocolManager.checkForMappingCompletion() && mappingLoadingTask != null) {
                 mappingLoadingTask.cancel();
                 mappingLoadingTask = null;
             }
@@ -207,11 +206,11 @@ public class ViaManagerImpl implements ViaManager {
             e.printStackTrace();
         }
 
-        // Unload
         loader.unload();
+        scheduler.shutdown();
     }
 
-    private final void checkJavaVersion() { // Stolen from Paper
+    private void checkJavaVersion() { // Stolen from Paper
         String javaVersion = System.getProperty("java.version");
         Matcher matcher = Pattern.compile("(?:1\\.)?(\\d+)").matcher(javaVersion);
         if (!matcher.find()) {
@@ -238,7 +237,8 @@ public class ViaManagerImpl implements ViaManager {
     private void unsupportedSoftwareWarning() {
         boolean found = false;
         for (final UnsupportedSoftware software : platform.getUnsupportedSoftwareClasses()) {
-            if (!software.findMatch()) {
+            final String match = software.match();
+            if (match == null) {
                 continue;
             }
 
@@ -250,7 +250,7 @@ public class ViaManagerImpl implements ViaManager {
                 found = true;
             }
 
-            platform.getLogger().severe("We strongly advise against using " + software.getName() + ":");
+            platform.getLogger().severe("We strongly advise against using " + match + ":");
             platform.getLogger().severe(software.getReason());
             platform.getLogger().severe("");
         }
@@ -301,6 +301,11 @@ public class ViaManagerImpl implements ViaManager {
         return loader;
     }
 
+    @Override
+    public Scheduler getScheduler() {
+        return scheduler;
+    }
+
     /**
      * Returns a mutable set of self-added subplatform version strings.
      * This set is expanded by the subplatform itself (e.g. ViaBackwards), and may not contain all running ones.
@@ -318,6 +323,11 @@ public class ViaManagerImpl implements ViaManager {
      */
     public void addEnableListener(Runnable runnable) {
         enableListeners.add(runnable);
+    }
+
+    @Override
+    public boolean isInitialized() {
+        return initialized;
     }
 
     public static final class ViaManagerBuilder {

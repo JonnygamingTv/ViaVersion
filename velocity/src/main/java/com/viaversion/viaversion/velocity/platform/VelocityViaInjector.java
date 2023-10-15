@@ -1,6 +1,6 @@
 /*
  * This file is part of ViaVersion - https://github.com/ViaVersion/ViaVersion
- * Copyright (C) 2016-2022 ViaVersion and contributors
+ * Copyright (C) 2016-2023 ViaVersion and contributors
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,19 +27,20 @@ import com.viaversion.viaversion.velocity.handlers.VelocityChannelInitializer;
 import io.netty.channel.ChannelInitializer;
 import it.unimi.dsi.fastutil.ints.IntLinkedOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSortedSet;
-
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import org.jetbrains.annotations.Nullable;
 
 
 public class VelocityViaInjector implements ViaInjector {
-    public static Method getPlayerInfoForwardingMode;
+    public static final Method GET_PLAYER_INFO_FORWARDING_MODE = getPlayerInfoForwardingModeMethod();
 
-    static {
+    private static @Nullable Method getPlayerInfoForwardingModeMethod() {
         try {
-            getPlayerInfoForwardingMode = Class.forName("com.velocitypowered.proxy.config.VelocityConfiguration").getMethod("getPlayerInfoForwardingMode");
+            return Class.forName("com.velocitypowered.proxy.config.VelocityConfiguration").getMethod("getPlayerInfoForwardingMode");
         } catch (NoSuchMethodException | ClassNotFoundException e) {
             e.printStackTrace();
+            return null;
         }
     }
 
@@ -96,8 +97,8 @@ public class VelocityViaInjector implements ViaInjector {
 
     public static int getLowestSupportedProtocolVersion() {
         try {
-            if (getPlayerInfoForwardingMode != null
-                    && ((Enum<?>) getPlayerInfoForwardingMode.invoke(VelocityPlugin.PROXY.getConfiguration()))
+            if (GET_PLAYER_INFO_FORWARDING_MODE != null
+                    && ((Enum<?>) GET_PLAYER_INFO_FORWARDING_MODE.invoke(VelocityPlugin.PROXY.getConfiguration()))
                     .name().equals("MODERN")) {
                 return ProtocolVersion.v1_13.getVersion();
             }

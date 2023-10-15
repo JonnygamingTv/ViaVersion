@@ -1,6 +1,5 @@
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import org.gradle.jvm.tasks.Jar
-import org.gradle.kotlin.dsl.named
 
 plugins {
     id("via.base-conventions")
@@ -25,7 +24,6 @@ tasks {
 publishShadowJar()
 
 fun ShadowJar.configureRelocations() {
-    relocate("javassist", "com.viaversion.viaversion.libs.javassist")
     relocate("com.google.gson", "com.viaversion.viaversion.libs.gson")
     relocate("com.github.steveice10.opennbt", "com.viaversion.viaversion.libs.opennbt")
     relocate("it.unimi.dsi.fastutil", "com.viaversion.viaversion.libs.fastutil")

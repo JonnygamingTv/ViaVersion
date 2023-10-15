@@ -1,6 +1,6 @@
 /*
  * This file is part of ViaVersion - https://github.com/ViaVersion/ViaVersion
- * Copyright (C) 2016-2022 ViaVersion and contributors
+ * Copyright (C) 2016-2023 ViaVersion and contributors
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,10 +20,10 @@ package com.viaversion.viaversion.unsupported;
 import com.google.common.base.Preconditions;
 import com.viaversion.viaversion.api.Via;
 import com.viaversion.viaversion.api.platform.UnsupportedSoftware;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 public final class UnsupportedPlugin implements UnsupportedSoftware {
 
@@ -51,13 +51,13 @@ public final class UnsupportedPlugin implements UnsupportedSoftware {
     }
 
     @Override
-    public final boolean findMatch() {
+    public final @Nullable String match() {
         for (final String identifier : identifiers) {
             if (Via.getPlatform().hasPlugin(identifier)) {
-                return true;
+                return identifier;
             }
         }
-        return false;
+        return null;
     }
 
     public static final class Builder {

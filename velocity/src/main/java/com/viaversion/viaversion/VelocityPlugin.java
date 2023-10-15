@@ -1,6 +1,6 @@
 /*
  * This file is part of ViaVersion - https://github.com/ViaVersion/ViaVersion
- * Copyright (C) 2016-2022 ViaVersion and contributors
+ * Copyright (C) 2016-2023 ViaVersion and contributors
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -30,9 +30,8 @@ import com.velocitypowered.api.proxy.ProxyServer;
 import com.viaversion.viaversion.api.Via;
 import com.viaversion.viaversion.api.command.ViaCommandSender;
 import com.viaversion.viaversion.api.configuration.ConfigurationProvider;
-import com.viaversion.viaversion.api.data.MappingDataLoader;
 import com.viaversion.viaversion.api.platform.PlatformTask;
-import com.viaversion.viaversion.api.platform.ViaPlatform;
+import com.viaversion.viaversion.api.platform.ViaServerProxyPlatform;
 import com.viaversion.viaversion.dump.PluginInfo;
 import com.viaversion.viaversion.util.ChatColorUtil;
 import com.viaversion.viaversion.util.GsonUtil;
@@ -46,15 +45,14 @@ import com.viaversion.viaversion.velocity.platform.VelocityViaLoader;
 import com.viaversion.viaversion.velocity.platform.VelocityViaTask;
 import com.viaversion.viaversion.velocity.service.ProtocolDetectorService;
 import com.viaversion.viaversion.velocity.util.LoggerWrapper;
-import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
-import org.slf4j.Logger;
-
 import java.io.File;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+import org.slf4j.Logger;
 
 @Plugin(
         id = "viaversion",
@@ -64,7 +62,7 @@ import java.util.concurrent.TimeUnit;
         description = "Allow newer Minecraft versions to connect to an older server version.",
         url = "https://viaversion.com"
 )
-public class VelocityPlugin implements ViaPlatform<Player> {
+public class VelocityPlugin implements ViaServerProxyPlatform<Player> {
     public static final LegacyComponentSerializer COMPONENT_SERIALIZER = LegacyComponentSerializer.builder().character(ChatColorUtil.COLOR_CHAR).extractUrls().build();
     public static ProxyServer PROXY;
 
@@ -76,6 +74,7 @@ public class VelocityPlugin implements ViaPlatform<Player> {
     @DataDirectory
     private Path configDir;
 
+    private final ProtocolDetectorService protocolDetectorService = new ProtocolDetectorService();
     private VelocityViaAPI api;
     private java.util.logging.Logger logger;
     private VelocityViaConfig conf;
@@ -105,15 +104,13 @@ public class VelocityPlugin implements ViaPlatform<Player> {
                 .commandHandler(commandHandler)
                 .loader(new VelocityViaLoader())
                 .injector(new VelocityViaInjector()).build());
-
-        if (proxy.getPluginManager().getPlugin("viabackwards").isPresent()) {
-            MappingDataLoader.enableMappingsCache();
-        }
     }
 
     @Subscribe(order = PostOrder.LAST)
     public void onProxyLateInit(ProxyInitializeEvent e) {
-        ((ViaManagerImpl) Via.getManager()).init();
+        final ViaManagerImpl manager = (ViaManagerImpl) Via.getManager();
+        manager.init();
+        manager.onServerLoaded();
     }
 
     @Override
@@ -144,26 +141,31 @@ public class VelocityPlugin implements ViaPlatform<Player> {
     }
 
     @Override
-    public PlatformTask runSync(Runnable runnable) {
-        return runSync(runnable, 0L);
-    }
-
-    @Override
-    public PlatformTask runSync(Runnable runnable, long ticks) {
-        return new VelocityViaTask(
-                PROXY.getScheduler()
-                        .buildTask(this, runnable)
-                        .delay(ticks * 50, TimeUnit.MILLISECONDS).schedule()
-        );
-    }
-
-    @Override
-    public PlatformTask runRepeatingSync(Runnable runnable, long ticks) {
+    public PlatformTask runRepeatingAsync(final Runnable runnable, final long ticks) {
         return new VelocityViaTask(
                 PROXY.getScheduler()
                         .buildTask(this, runnable)
                         .repeat(ticks * 50, TimeUnit.MILLISECONDS).schedule()
         );
+    }
+
+    @Override
+    public PlatformTask runSync(Runnable runnable) {
+        return runSync(runnable, 0L);
+    }
+
+    @Override
+    public PlatformTask runSync(Runnable runnable, long delay) {
+        return new VelocityViaTask(
+                PROXY.getScheduler()
+                        .buildTask(this, runnable)
+                        .delay(delay * 50, TimeUnit.MILLISECONDS).schedule()
+        );
+    }
+
+    @Override
+    public PlatformTask runRepeatingSync(Runnable runnable, long period) {
+        return runRepeatingAsync(runnable, period);
     }
 
     @Override
@@ -230,7 +232,7 @@ public class VelocityPlugin implements ViaPlatform<Player> {
             ));
         }
         extra.add("plugins", GsonUtil.getGson().toJsonTree(plugins));
-        extra.add("servers", GsonUtil.getGson().toJsonTree(ProtocolDetectorService.getDetectedIds()));
+        extra.add("servers", GsonUtil.getGson().toJsonTree(protocolDetectorService.detectedProtocolVersions()));
         return extra;
     }
 
@@ -247,6 +249,11 @@ public class VelocityPlugin implements ViaPlatform<Player> {
     @Override
     public java.util.logging.Logger getLogger() {
         return logger;
+    }
+
+    @Override
+    public ProtocolDetectorService protocolDetectorService() {
+        return protocolDetectorService;
     }
 
     private boolean hasConnectionEvent() {

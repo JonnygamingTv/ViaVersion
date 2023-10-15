@@ -1,6 +1,6 @@
 /*
  * This file is part of ViaVersion - https://github.com/ViaVersion/ViaVersion
- * Copyright (C) 2016-2022 ViaVersion and contributors
+ * Copyright (C) 2016-2023 ViaVersion and contributors
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,12 +19,12 @@ package com.viaversion.viaversion.unsupported;
 
 import com.google.common.base.Preconditions;
 import com.viaversion.viaversion.api.platform.UnsupportedSoftware;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 public final class UnsupportedServerSoftware implements UnsupportedSoftware {
 
@@ -54,20 +54,20 @@ public final class UnsupportedServerSoftware implements UnsupportedSoftware {
     }
 
     @Override
-    public final boolean findMatch() {
+    public final @Nullable String match() {
         for (String className : classNames) {
             try {
                 Class.forName(className);
-                return true;
+                return name;
             } catch (ClassNotFoundException ignored) {
             }
         }
         for (UnsupportedMethods method : methods) {
             if (method.findMatch()) {
-                return true;
+                return name;
             }
         }
-        return false;
+        return null;
     }
 
     public static final class Builder {

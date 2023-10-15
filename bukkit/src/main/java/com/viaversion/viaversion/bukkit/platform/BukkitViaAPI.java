@@ -1,6 +1,6 @@
 /*
  * This file is part of ViaVersion - https://github.com/ViaVersion/ViaVersion
- * Copyright (C) 2016-2022 ViaVersion and contributors
+ * Copyright (C) 2016-2023 ViaVersion and contributors
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,10 +23,9 @@ import com.viaversion.viaversion.api.Via;
 import com.viaversion.viaversion.api.connection.UserConnection;
 import com.viaversion.viaversion.bukkit.util.ProtocolSupportUtil;
 import io.netty.buffer.ByteBuf;
+import java.util.UUID;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
-
-import java.util.UUID;
 
 public class BukkitViaAPI extends ViaAPIBase<Player> {
     private final ViaVersionPlugin plugin;
@@ -43,29 +42,22 @@ public class BukkitViaAPI extends ViaAPIBase<Player> {
     @Override
     public int getPlayerVersion(UUID uuid) {
         UserConnection connection = Via.getManager().getConnectionManager().getConnectedClient(uuid);
-        if (connection == null) {
+        if (connection != null) {
+            return connection.getProtocolInfo().getProtocolVersion();
+        }
+
+        if (isProtocolSupport()) {
             Player player = Bukkit.getPlayer(uuid);
-            if (player != null && isProtocolSupport()) {
+            if (player != null) {
                 return ProtocolSupportUtil.getProtocolVersion(player);
             }
-            return -1;
         }
-        return connection.getProtocolInfo().getProtocolVersion();
+        return -1;
     }
 
     @Override
     public void sendRawPacket(Player player, ByteBuf packet) throws IllegalArgumentException {
         sendRawPacket(player.getUniqueId(), packet);
-    }
-
-    /**
-     * Returns if this version is a compatibility build for spigot.
-     * Eg. 1.9.1 / 1.9.2 allow certain versions to connect
-     *
-     * @return true if compat Spigot build
-     */
-    public boolean isCompatSpigotBuild() {
-        return plugin.isCompatSpigotBuild();
     }
 
     /**
@@ -76,5 +68,4 @@ public class BukkitViaAPI extends ViaAPIBase<Player> {
     public boolean isProtocolSupport() {
         return plugin.isProtocolSupport();
     }
-
 }

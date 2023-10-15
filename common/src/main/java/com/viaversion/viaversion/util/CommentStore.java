@@ -1,6 +1,6 @@
 /*
  * This file is part of ViaVersion - https://github.com/ViaVersion/ViaVersion
- * Copyright (C) 2016-2022 ViaVersion and contributors
+ * Copyright (C) 2016-2023 ViaVersion and contributors
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,10 +17,8 @@
  */
 package com.viaversion.viaversion.util;
 
-import com.google.common.base.Joiner;
 import com.google.common.io.CharStreams;
 import com.google.common.io.Files;
-
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -85,6 +83,9 @@ public class CommentStore {
     }
 
     public void storeComments(final InputStream inputStream) throws IOException {
+        mainHeader.clear();
+        headers.clear();
+
         final String data;
         try (final InputStreamReader reader = new InputStreamReader(inputStream, StandardCharsets.UTF_8)) {
             data = CharStreams.toString(reader);
@@ -219,20 +220,6 @@ public class CommentStore {
         Files.write(fileData.toString(), output, StandardCharsets.UTF_8);
     }
 
-    private String addHeaderTags(final List<String> header, final String indent) {
-        final StringBuilder builder = new StringBuilder();
-        for (final String line : header) {
-            builder.append(indent).append("# ").append(line).append('\n');
-        }
-        return builder.toString();
-    }
-
-    private String join(final String[] array, final char joinChar, final int start, final int length) {
-        final String[] copy = new String[length - start];
-        System.arraycopy(array, start, copy, 0, length - start);
-        return Joiner.on(joinChar).join(copy);
-    }
-
     private int getIndents(final String line) {
         int count = 0;
         for (int i = 0; i < line.length(); i++) {
@@ -249,17 +236,5 @@ public class CommentStore {
         final String[] copy = new String[length];
         System.arraycopy(array, 0, copy, 0, length);
         return String.join(this.pathSeparator, copy);
-    }
-
-    private int getSuccessiveSpaces(final String text) {
-        int count = 0;
-        for (int i = 0; i < text.length(); i++) {
-            if (text.charAt(i) == ' ') {
-                count += 1;
-            } else {
-                break;
-            }
-        }
-        return count;
     }
 }

@@ -1,6 +1,6 @@
 /*
  * This file is part of ViaVersion - https://github.com/ViaVersion/ViaVersion
- * Copyright (C) 2016-2022 ViaVersion and contributors
+ * Copyright (C) 2016-2023 ViaVersion and contributors
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,6 +22,8 @@
  */
 package com.viaversion.viaversion.api.platform;
 
+import org.checkerframework.checker.nullness.qual.Nullable;
+
 public interface UnsupportedSoftware {
 
     /**
@@ -39,9 +41,18 @@ public interface UnsupportedSoftware {
     String getReason();
 
     /**
+     * Returns the name of unsupported software if present.
+     *
+     * @return name of unsupported software if it is matched, else null
+     */
+    @Nullable String match();
+
+    /**
      * Returns whether the unsupported software is present.
      *
      * @return true if the unsupported software is found
      */
-    boolean findMatch();
+    default boolean findMatch() {
+        return match() != null;
+    }
 }

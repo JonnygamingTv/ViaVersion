@@ -1,6 +1,6 @@
 /*
  * This file is part of ViaVersion - https://github.com/ViaVersion/ViaVersion
- * Copyright (C) 2016-2022 ViaVersion and contributors
+ * Copyright (C) 2016-2023 ViaVersion and contributors
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,32 +17,35 @@
  */
 package com.viaversion.viaversion.bukkit.util;
 
-import org.bukkit.entity.Player;
-
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import org.bukkit.entity.Player;
 
-public class ProtocolSupportUtil {
-    private static Method protocolVersionMethod = null;
-    private static Method getIdMethod = null;
+public final class ProtocolSupportUtil {
+    private static final Method PROTOCOL_VERSION_METHOD;
+    private static final Method GET_ID_METHOD;
 
     static {
+        Method protocolVersionMethod = null;
+        Method getIdMethod = null;
         try {
             protocolVersionMethod = Class.forName("protocolsupport.api.ProtocolSupportAPI").getMethod("getProtocolVersion", Player.class);
             getIdMethod = Class.forName("protocolsupport.api.ProtocolVersion").getMethod("getId");
-        } catch (Exception e) {
+        } catch (ReflectiveOperationException e) {
             // ProtocolSupport not installed.
         }
+        PROTOCOL_VERSION_METHOD = protocolVersionMethod;
+        GET_ID_METHOD = getIdMethod;
     }
 
     public static int getProtocolVersion(Player player) {
-        if (protocolVersionMethod == null) return -1;
+        if (PROTOCOL_VERSION_METHOD == null) {
+            return -1;
+        }
         try {
-            Object version = protocolVersionMethod.invoke(null, player);
-            return (int) getIdMethod.invoke(version);
-        } catch (IllegalAccessException e) {
-            e.printStackTrace();
-        } catch (InvocationTargetException e) {
+            Object version = PROTOCOL_VERSION_METHOD.invoke(null, player);
+            return (int) GET_ID_METHOD.invoke(version);
+        } catch (IllegalAccessException | InvocationTargetException e) {
             e.printStackTrace();
         }
         return -1;

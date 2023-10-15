@@ -1,6 +1,6 @@
 /*
  * This file is part of ViaVersion - https://github.com/ViaVersion/ViaVersion
- * Copyright (C) 2016-2022 ViaVersion and contributors
+ * Copyright (C) 2016-2023 ViaVersion and contributors
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -38,6 +38,18 @@ public interface ChunkSection {
 
     static int index(int x, int y, int z) {
         return y << 8 | z << 4 | x;
+    }
+
+    static int xFromIndex(int idx) {
+        return idx & 0xF;
+    }
+
+    static int yFromIndex(int idx) {
+        return idx >> 8 & 0xF;
+    }
+
+    static int zFromIndex(int idx) {
+        return idx >> 4 & 0xF;
     }
 
     @Deprecated/*(forRemoval = true)*/

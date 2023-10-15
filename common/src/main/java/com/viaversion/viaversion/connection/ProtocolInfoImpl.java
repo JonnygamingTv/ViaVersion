@@ -1,6 +1,6 @@
 /*
  * This file is part of ViaVersion - https://github.com/ViaVersion/ViaVersion
- * Copyright (C) 2016-2022 ViaVersion and contributors
+ * Copyright (C) 2016-2023 ViaVersion and contributors
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,35 +17,52 @@
  */
 package com.viaversion.viaversion.connection;
 
+import com.viaversion.viaversion.api.Via;
 import com.viaversion.viaversion.api.connection.ProtocolInfo;
 import com.viaversion.viaversion.api.connection.UserConnection;
 import com.viaversion.viaversion.api.protocol.ProtocolPipeline;
 import com.viaversion.viaversion.api.protocol.packet.State;
 import com.viaversion.viaversion.api.protocol.version.ProtocolVersion;
-
 import java.util.UUID;
 
 public class ProtocolInfoImpl implements ProtocolInfo {
     private final UserConnection connection;
-    private State state = State.HANDSHAKE;
+    private State clientState = State.HANDSHAKE;
+    private State serverState = State.HANDSHAKE;
     private int protocolVersion = -1;
     private int serverProtocolVersion = -1;
     private String username;
     private UUID uuid;
     private ProtocolPipeline pipeline;
 
-    public ProtocolInfoImpl(UserConnection connection) {
+    public ProtocolInfoImpl(final UserConnection connection) {
         this.connection = connection;
     }
 
     @Override
-    public State getState() {
-        return state;
+    public State getClientState() {
+        return clientState;
     }
 
     @Override
-    public void setState(State state) {
-        this.state = state;
+    public void setClientState(final State clientState) {
+        if (Via.getManager().debugHandler().enabled()) {
+            Via.getPlatform().getLogger().info("Client state changed from " + this.clientState + " to " + clientState + " for " + connection.getProtocolInfo().getUuid());
+        }
+        this.clientState = clientState;
+    }
+
+    @Override
+    public State getServerState() {
+        return serverState;
+    }
+
+    @Override
+    public void setServerState(final State serverState) {
+        if (Via.getManager().debugHandler().enabled()) {
+            Via.getPlatform().getLogger().info("Server state changed from " + this.serverState + " to " + serverState + " for " + connection.getProtocolInfo().getUuid());
+        }
+        this.serverState = serverState;
     }
 
     @Override
@@ -109,7 +126,8 @@ public class ProtocolInfoImpl implements ProtocolInfo {
     @Override
     public String toString() {
         return "ProtocolInfo{" +
-                "state=" + state +
+                "clientState=" + clientState +
+                ", serverState=" + serverState +
                 ", protocolVersion=" + protocolVersion +
                 ", serverProtocolVersion=" + serverProtocolVersion +
                 ", username='" + username + '\'' +

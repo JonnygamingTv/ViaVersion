@@ -1,6 +1,6 @@
 /*
  * This file is part of ViaVersion - https://github.com/ViaVersion/ViaVersion
- * Copyright (C) 2016-2022 ViaVersion and contributors
+ * Copyright (C) 2016-2023 ViaVersion and contributors
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,6 +22,7 @@
  */
 package com.viaversion.viaversion.api.type.types;
 
+import com.viaversion.viaversion.api.type.OptionalType;
 import com.viaversion.viaversion.api.type.Type;
 import com.viaversion.viaversion.api.type.TypeConverter;
 import io.netty.buffer.ByteBuf;
@@ -66,5 +67,12 @@ public class FloatType extends Type<Float> implements TypeConverter<Float> {
             return ((Boolean) o) ? 1F : 0;
         }
         return (Float) o;
+    }
+
+    public static final class OptionalFloatType extends OptionalType<Float> {
+
+        public OptionalFloatType() {
+            super(Type.FLOAT);
+        }
     }
 }

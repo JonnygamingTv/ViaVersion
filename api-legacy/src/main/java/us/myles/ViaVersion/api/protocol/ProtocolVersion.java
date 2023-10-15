@@ -1,6 +1,6 @@
 /*
  * This file is part of ViaVersion - https://github.com/ViaVersion/ViaVersion
- * Copyright (C) 2016-2022 ViaVersion and contributors
+ * Copyright (C) 2016-2023 ViaVersion and contributors
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -26,14 +26,13 @@ import com.google.common.base.Preconditions;
 import com.viaversion.viaversion.api.protocol.version.VersionRange;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
-import org.checkerframework.checker.nullness.qual.NonNull;
-import org.checkerframework.checker.nullness.qual.Nullable;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * @deprecated will no longer be updated and may be removed at some point, use {@link com.viaversion.viaversion.api.protocol.version.ProtocolVersion}
@@ -84,7 +83,11 @@ public class ProtocolVersion {
     public static final ProtocolVersion v1_18 = register(757, "1.18/1.18.1", new VersionRange("1.18", 0, 1));
     public static final ProtocolVersion v1_18_2 = register(758, "1.18.2");
     public static final ProtocolVersion v1_19 = register(759, "1.19");
-    public static final ProtocolVersion v1_19_1 = register(760, "1.19.1");
+    public static final ProtocolVersion v1_19_1 = register(760, "1.19.1/2", new VersionRange("1.19", 1, 2));
+    public static final ProtocolVersion v1_19_3 = register(761, "1.19.3");
+    public static final ProtocolVersion v1_19_4 = register(762, "1.19.4");
+    public static final ProtocolVersion v1_20 = register(763, "1.20/1.20.1", new VersionRange("1.20", 0, 1));
+    public static final ProtocolVersion v1_20_2 = register(764, "1.20.2");
     public static final ProtocolVersion unknown = register(-1, "UNKNOWN");
 
     public static ProtocolVersion register(int version, String name) {

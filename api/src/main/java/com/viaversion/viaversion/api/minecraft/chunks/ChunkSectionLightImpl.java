@@ -1,6 +1,6 @@
 /*
  * This file is part of ViaVersion - https://github.com/ViaVersion/ViaVersion
- * Copyright (C) 2016-2022 ViaVersion and contributors
+ * Copyright (C) 2016-2023 ViaVersion and contributors
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -47,6 +47,11 @@ public class ChunkSectionLightImpl implements ChunkSectionLight {
 
     @Override
     public void setSkyLight(byte[] data) {
+        if (data == null) {
+            this.skyLight = null;
+            return;
+        }
+
         if (data.length != LIGHT_LENGTH) throw new IllegalArgumentException("Data length != " + LIGHT_LENGTH);
         if (this.skyLight == null) {
             this.skyLight = new NibbleArray(data);

@@ -1,6 +1,6 @@
 /*
  * This file is part of ViaVersion - https://github.com/ViaVersion/ViaVersion
- * Copyright (C) 2016-2022 ViaVersion and contributors
+ * Copyright (C) 2016-2023 ViaVersion and contributors
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,15 +20,15 @@ package com.viaversion.viaversion.connection;
 import com.viaversion.viaversion.api.Via;
 import com.viaversion.viaversion.api.connection.ConnectionManager;
 import com.viaversion.viaversion.api.connection.UserConnection;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
-import org.checkerframework.checker.nullness.qual.Nullable;
-
 import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 public class ConnectionManagerImpl implements ConnectionManager {
     protected final Map<UUID, UserConnection> clients = new ConcurrentHashMap<>();
@@ -37,17 +37,29 @@ public class ConnectionManagerImpl implements ConnectionManager {
     @Override
     public void onLoginSuccess(UserConnection connection) {
         Objects.requireNonNull(connection, "connection is null!");
-        connections.add(connection);
+        Channel channel = connection.getChannel();
+
+        // This user has already disconnected...
+        if (channel != null && !channel.isOpen()) return;
+
+        boolean newlyAdded = connections.add(connection);
 
         if (isFrontEnd(connection)) {
             UUID id = connection.getProtocolInfo().getUuid();
-            if (clients.put(id, connection) != null) {
+            UserConnection previous = clients.put(id, connection);
+            if (previous != null && previous != connection) {
                 Via.getPlatform().getLogger().warning("Duplicate UUID on frontend connection! (" + id + ")");
             }
         }
 
-        if (connection.getChannel() != null) {
-            connection.getChannel().closeFuture().addListener((ChannelFutureListener) future -> onDisconnect(connection));
+        if (channel != null) {
+            // We managed to add a user that had already disconnected!
+            // Let's clean up the mess here and now
+            if (!channel.isOpen()) {
+                onDisconnect(connection);
+            } else if (newlyAdded) { // Setup to clean-up on disconnect
+                channel.closeFuture().addListener((ChannelFutureListener) future -> onDisconnect(connection));
+            }
         }
     }
 
@@ -60,6 +72,8 @@ public class ConnectionManagerImpl implements ConnectionManager {
             UUID id = connection.getProtocolInfo().getUuid();
             clients.remove(id);
         }
+
+        connection.clearStoredObjects();
     }
 
     @Override

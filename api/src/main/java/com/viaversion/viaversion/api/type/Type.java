@@ -1,6 +1,6 @@
 /*
  * This file is part of ViaVersion - https://github.com/ViaVersion/ViaVersion
- * Copyright (C) 2016-2022 ViaVersion and contributors
+ * Copyright (C) 2016-2023 ViaVersion and contributors
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,7 +22,6 @@
  */
 package com.viaversion.viaversion.api.type;
 
-
 import com.github.steveice10.opennbt.tag.builtin.CompoundTag;
 import com.google.gson.JsonElement;
 import com.viaversion.viaversion.api.minecraft.BlockChangeRecord;
@@ -31,9 +30,12 @@ import com.viaversion.viaversion.api.minecraft.GlobalPosition;
 import com.viaversion.viaversion.api.minecraft.PlayerMessageSignature;
 import com.viaversion.viaversion.api.minecraft.Position;
 import com.viaversion.viaversion.api.minecraft.ProfileKey;
+import com.viaversion.viaversion.api.minecraft.Quaternion;
 import com.viaversion.viaversion.api.minecraft.Vector;
+import com.viaversion.viaversion.api.minecraft.Vector3f;
 import com.viaversion.viaversion.api.minecraft.VillagerData;
 import com.viaversion.viaversion.api.minecraft.item.Item;
+import com.viaversion.viaversion.api.minecraft.metadata.ChunkPosition;
 import com.viaversion.viaversion.api.type.types.ArrayType;
 import com.viaversion.viaversion.api.type.types.BooleanType;
 import com.viaversion.viaversion.api.type.types.ByteArrayType;
@@ -57,24 +59,28 @@ import com.viaversion.viaversion.api.type.types.VarIntType;
 import com.viaversion.viaversion.api.type.types.VarLongType;
 import com.viaversion.viaversion.api.type.types.VoidType;
 import com.viaversion.viaversion.api.type.types.minecraft.BlockChangeRecordType;
+import com.viaversion.viaversion.api.type.types.minecraft.ChunkPositionType;
 import com.viaversion.viaversion.api.type.types.minecraft.EulerAngleType;
 import com.viaversion.viaversion.api.type.types.minecraft.FlatItemArrayType;
 import com.viaversion.viaversion.api.type.types.minecraft.FlatItemType;
 import com.viaversion.viaversion.api.type.types.minecraft.FlatVarIntItemArrayType;
 import com.viaversion.viaversion.api.type.types.minecraft.FlatVarIntItemType;
 import com.viaversion.viaversion.api.type.types.minecraft.GlobalPositionType;
+import com.viaversion.viaversion.api.type.types.minecraft.Item1_20_2Type;
 import com.viaversion.viaversion.api.type.types.minecraft.ItemArrayType;
 import com.viaversion.viaversion.api.type.types.minecraft.ItemType;
 import com.viaversion.viaversion.api.type.types.minecraft.NBTType;
+import com.viaversion.viaversion.api.type.types.minecraft.NamelessNBTType;
 import com.viaversion.viaversion.api.type.types.minecraft.OptionalVarIntType;
 import com.viaversion.viaversion.api.type.types.minecraft.PlayerMessageSignatureType;
 import com.viaversion.viaversion.api.type.types.minecraft.Position1_14Type;
 import com.viaversion.viaversion.api.type.types.minecraft.PositionType;
 import com.viaversion.viaversion.api.type.types.minecraft.ProfileKeyType;
+import com.viaversion.viaversion.api.type.types.minecraft.QuaternionType;
 import com.viaversion.viaversion.api.type.types.minecraft.VarLongBlockChangeRecordType;
+import com.viaversion.viaversion.api.type.types.minecraft.Vector3fType;
 import com.viaversion.viaversion.api.type.types.minecraft.VectorType;
 import com.viaversion.viaversion.api.type.types.minecraft.VillagerDataType;
-
 import java.util.UUID;
 
 /**
@@ -87,6 +93,7 @@ public abstract class Type<T> implements ByteBufReader<T>, ByteBufWriter<T> {
     public static final ByteType BYTE = new ByteType();
     public static final UnsignedByteType UNSIGNED_BYTE = new UnsignedByteType();
     public static final Type<byte[]> BYTE_ARRAY_PRIMITIVE = new ByteArrayType();
+    public static final Type<byte[]> OPTIONAL_BYTE_ARRAY_PRIMITIVE = new ByteArrayType.OptionalByteArrayType();
     public static final Type<byte[]> SHORT_BYTE_ARRAY = new ShortByteArrayType();
     public static final Type<byte[]> REMAINING_BYTES = new RemainingBytesType();
 
@@ -95,6 +102,7 @@ public abstract class Type<T> implements ByteBufReader<T>, ByteBufWriter<T> {
 
     public static final IntType INT = new IntType();
     public static final FloatType FLOAT = new FloatType();
+    public static final FloatType.OptionalFloatType OPTIONAL_FLOAT = new FloatType.OptionalFloatType();
     public static final DoubleType DOUBLE = new DoubleType();
 
     public static final LongType LONG = new LongType();
@@ -155,11 +163,14 @@ public abstract class Type<T> implements ByteBufReader<T>, ByteBufWriter<T> {
     public static final Type<Position> OPTIONAL_POSITION_1_14 = new Position1_14Type.OptionalPosition1_14Type();
     public static final Type<EulerAngle> ROTATION = new EulerAngleType();
     public static final Type<Vector> VECTOR = new VectorType();
+    public static final Type<Vector3f> VECTOR3F = new Vector3fType();
+    public static final Type<Quaternion> QUATERNION = new QuaternionType();
     public static final Type<CompoundTag> NBT = new NBTType();
+    public static final Type<CompoundTag> NAMELESS_NBT = new NamelessNBTType();
     public static final Type<CompoundTag[]> NBT_ARRAY = new ArrayType<>(Type.NBT);
-
     public static final Type<GlobalPosition> GLOBAL_POSITION = new GlobalPositionType();
     public static final Type<GlobalPosition> OPTIONAL_GLOBAL_POSITION = new GlobalPositionType.OptionalGlobalPositionType();
+    public static final Type<ChunkPosition> CHUNK_POSITION = new ChunkPositionType();
 
     public static final Type<BlockChangeRecord> BLOCK_CHANGE_RECORD = new BlockChangeRecordType();
     public static final Type<BlockChangeRecord[]> BLOCK_CHANGE_RECORD_ARRAY = new ArrayType<>(Type.BLOCK_CHANGE_RECORD);
@@ -186,6 +197,9 @@ public abstract class Type<T> implements ByteBufReader<T>, ByteBufWriter<T> {
     public static final Type<Item[]> FLAT_VAR_INT_ITEM_ARRAY = new FlatVarIntItemArrayType();
     public static final Type<Item[]> FLAT_ITEM_ARRAY_VAR_INT = new ArrayType<>(FLAT_ITEM);
     public static final Type<Item[]> FLAT_VAR_INT_ITEM_ARRAY_VAR_INT = new ArrayType<>(FLAT_VAR_INT_ITEM);
+
+    public static final Type<Item> ITEM1_20_2 = new Item1_20_2Type();
+    public static final Type<Item[]> ITEM1_20_2_VAR_INT_ARRAY = new ArrayType<>(ITEM1_20_2);
 
     /* Actual Class */
     private final Class<? super T> outputClass;
@@ -230,6 +244,6 @@ public abstract class Type<T> implements ByteBufReader<T>, ByteBufWriter<T> {
 
     @Override
     public String toString() {
-        return "Type|" + typeName;
+        return typeName;
     }
 }

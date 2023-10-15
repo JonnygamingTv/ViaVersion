@@ -1,6 +1,6 @@
 /*
  * This file is part of ViaVersion - https://github.com/ViaVersion/ViaVersion
- * Copyright (C) 2016-2022 ViaVersion and contributors
+ * Copyright (C) 2016-2023 ViaVersion and contributors
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,7 +19,7 @@ package com.viaversion.viaversion.bukkit.util;
 
 import org.bukkit.Bukkit;
 
-public class NMSUtil {
+public final class NMSUtil {
     private static final String BASE = Bukkit.getServer().getClass().getPackage().getName();
     private static final String NMS = BASE.replace("org.bukkit.craftbukkit", "net.minecraft.server");
     private static final boolean DEBUG_PROPERTY = loadDebugProperty();
@@ -51,10 +51,6 @@ public class NMSUtil {
 
     public static Class<?> obc(String className) throws ClassNotFoundException {
         return Class.forName(BASE + "." + className);
-    }
-
-    public static String getVersion() {
-        return BASE.substring(BASE.lastIndexOf('.') + 1);
     }
 
     /**

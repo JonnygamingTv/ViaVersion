@@ -1,6 +1,6 @@
 /*
  * This file is part of ViaVersion - https://github.com/ViaVersion/ViaVersion
- * Copyright (C) 2016-2022 ViaVersion and contributors
+ * Copyright (C) 2016-2023 ViaVersion and contributors
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,44 +22,64 @@
  */
 package com.viaversion.viaversion.api.type.types.minecraft;
 
-import com.github.steveice10.opennbt.NBTIO;
 import com.github.steveice10.opennbt.tag.builtin.CompoundTag;
-import com.google.common.base.Preconditions;
+import com.github.steveice10.opennbt.tag.limiter.TagLimiter;
 import com.viaversion.viaversion.api.type.Type;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.buffer.ByteBufOutputStream;
-
-import java.io.DataInput;
-import java.io.DataOutput;
+import java.io.IOException;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 public class NBTType extends Type<CompoundTag> {
+
+    private static final int MAX_NBT_BYTES = 2097152; // 2mb
+    private static final int MAX_NESTING_LEVEL = 512;
 
     public NBTType() {
         super(CompoundTag.class);
     }
 
     @Override
-    public CompoundTag read(ByteBuf buffer) throws Exception {
-        Preconditions.checkArgument(buffer.readableBytes() <= 2097152, "Cannot read NBT (got %s bytes)", buffer.readableBytes());
-
-        int readerIndex = buffer.readerIndex();
-        byte b = buffer.readByte();
-        if (b == 0) {
-            return null;
-        } else {
-            buffer.readerIndex(readerIndex);
-            return NBTIO.readTag((DataInput) new ByteBufInputStream(buffer));
-        }
+    public CompoundTag read(final ByteBuf buffer) throws Exception {
+        return read(buffer, true);
     }
 
     @Override
-    public void write(ByteBuf buffer, CompoundTag object) throws Exception {
-        if (object == null) {
-            buffer.writeByte(0);
-        } else {
-            ByteBufOutputStream bytebufStream = new ByteBufOutputStream(buffer);
-            NBTIO.writeTag((DataOutput) bytebufStream, object);
+    public void write(final ByteBuf buffer, final CompoundTag object) throws Exception {
+        write(buffer, object, "");
+    }
+
+    public static CompoundTag read(final ByteBuf buffer, final boolean readName) throws Exception {
+        final byte id = buffer.readByte();
+        if (id == 0) {
+            return null;
         }
+        if (id != CompoundTag.ID) {
+            throw new IOException(String.format("Expected root tag to be a CompoundTag, was %s", id));
+        }
+
+        if (readName) {
+            buffer.skipBytes(buffer.readUnsignedShort());
+        }
+
+        final TagLimiter tagLimiter = TagLimiter.create(MAX_NBT_BYTES, MAX_NESTING_LEVEL);
+        final CompoundTag tag = new CompoundTag();
+        tag.read(new ByteBufInputStream(buffer), tagLimiter);
+        return tag;
+    }
+
+    public static void write(final ByteBuf buffer, final CompoundTag tag, final @Nullable String name) throws Exception {
+        if (tag == null) {
+            buffer.writeByte(0);
+            return;
+        }
+
+        final ByteBufOutputStream out = new ByteBufOutputStream(buffer);
+        out.writeByte(CompoundTag.ID);
+        if (name != null) {
+            out.writeUTF(name);
+        }
+        tag.write(out);
     }
 }

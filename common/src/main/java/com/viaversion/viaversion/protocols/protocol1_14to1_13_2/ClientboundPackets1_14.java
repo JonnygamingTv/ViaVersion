@@ -1,6 +1,6 @@
 /*
  * This file is part of ViaVersion - https://github.com/ViaVersion/ViaVersion
- * Copyright (C) 2016-2022 ViaVersion and contributors
+ * Copyright (C) 2016-2023 ViaVersion and contributors
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -112,8 +112,7 @@ public enum ClientboundPackets1_14 implements ClientboundPacketType {
     ENTITY_PROPERTIES, // 0x58
     ENTITY_EFFECT, // 0x59
     DECLARE_RECIPES, // 0x5A
-    TAGS, // 0x5B
-    ACKNOWLEDGE_PLAYER_DIGGING; // 0x5C
+    TAGS; // 0x5B
 
     @Override
     public int getId() {

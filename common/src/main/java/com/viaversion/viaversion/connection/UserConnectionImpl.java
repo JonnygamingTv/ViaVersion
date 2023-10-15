@@ -1,6 +1,6 @@
 /*
  * This file is part of ViaVersion - https://github.com/ViaVersion/ViaVersion
- * Copyright (C) 2016-2022 ViaVersion and contributors
+ * Copyright (C) 2016-2023 ViaVersion and contributors
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,6 +27,7 @@ import com.viaversion.viaversion.api.protocol.Protocol;
 import com.viaversion.viaversion.api.protocol.packet.Direction;
 import com.viaversion.viaversion.api.protocol.packet.PacketTracker;
 import com.viaversion.viaversion.api.protocol.packet.PacketWrapper;
+import com.viaversion.viaversion.api.protocol.packet.State;
 import com.viaversion.viaversion.api.type.Type;
 import com.viaversion.viaversion.exception.CancelException;
 import com.viaversion.viaversion.protocol.packet.PacketWrapperImpl;
@@ -36,8 +37,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
-import org.checkerframework.checker.nullness.qual.Nullable;
-
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -48,6 +47,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 public class UserConnectionImpl implements UserConnection {
     private static final AtomicLong IDS = new AtomicLong();
@@ -95,12 +95,19 @@ public class UserConnectionImpl implements UserConnection {
 
     @Override
     public <T extends StorableObject> @Nullable T remove(Class<T> objectClass) {
-        return (T) storedObjects.remove(objectClass);
+        final StorableObject object = storedObjects.remove(objectClass);
+        if (object != null) {
+            object.onRemove();
+        }
+        return (T) object;
     }
 
     @Override
     public void put(StorableObject object) {
-        storedObjects.put(object.getClass(), object);
+        final StorableObject previousObject = storedObjects.put(object.getClass(), object);
+        if (previousObject != null) {
+            previousObject.onRemove();
+        }
     }
 
     @Override
@@ -123,12 +130,21 @@ public class UserConnectionImpl implements UserConnection {
     @Override
     public void clearStoredObjects(boolean isServerSwitch) {
         if (isServerSwitch) {
-            storedObjects.values().removeIf(StorableObject::clearOnServerSwitch);
+            storedObjects.values().removeIf(storableObject -> {
+                if (storableObject.clearOnServerSwitch()) {
+                    storableObject.onRemove();
+                    return true;
+                }
+                return false;
+            });
             for (EntityTracker tracker : entityTrackers.values()) {
                 tracker.clearEntities();
                 tracker.trackClientEntity();
             }
         } else {
+            for (StorableObject object : storedObjects.values()) {
+                object.onRemove();
+            }
             storedObjects.clear();
             entityTrackers.clear();
         }
@@ -309,8 +325,9 @@ public class UserConnectionImpl implements UserConnection {
         }
 
         PacketWrapper wrapper = new PacketWrapperImpl(id, buf, this);
+        State state = protocolInfo.getState(direction);
         try {
-            protocolInfo.getPipeline().transform(direction, protocolInfo.getState(), wrapper);
+            protocolInfo.getPipeline().transform(direction, state, wrapper);
         } catch (CancelException ex) {
             throw cancelSupplier.apply(ex);
         }

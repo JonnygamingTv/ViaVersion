@@ -1,6 +1,6 @@
 /*
  * This file is part of ViaVersion - https://github.com/ViaVersion/ViaVersion
- * Copyright (C) 2016-2022 ViaVersion and contributors
+ * Copyright (C) 2016-2023 ViaVersion and contributors
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,21 +24,18 @@ import com.viaversion.viaversion.api.platform.ViaPlatformLoader;
 import com.viaversion.viaversion.api.protocol.version.ProtocolVersion;
 import com.viaversion.viaversion.api.protocol.version.VersionProvider;
 import com.viaversion.viaversion.protocols.protocol1_9to1_8.providers.BossBarProvider;
-import com.viaversion.viaversion.protocols.protocol1_9to1_8.providers.MovementTransmitterProvider;
 import com.viaversion.viaversion.velocity.listeners.UpdateListener;
 import com.viaversion.viaversion.velocity.providers.VelocityBossBarProvider;
-import com.viaversion.viaversion.velocity.providers.VelocityMovementTransmitter;
 import com.viaversion.viaversion.velocity.providers.VelocityVersionProvider;
-import com.viaversion.viaversion.velocity.service.ProtocolDetectorService;
 
 public class VelocityViaLoader implements ViaPlatformLoader {
+
     @Override
     public void load() {
         Object plugin = VelocityPlugin.PROXY.getPluginManager()
                 .getPlugin("viaversion").flatMap(PluginContainer::getInstance).get();
 
         if (Via.getAPI().getServerVersion().lowestSupportedVersion() < ProtocolVersion.v1_9.getVersion()) {
-            Via.getManager().getProviders().use(MovementTransmitterProvider.class, new VelocityMovementTransmitter());
             Via.getManager().getProviders().use(BossBarProvider.class, new VelocityBossBarProvider());
         }
 
@@ -50,8 +47,8 @@ public class VelocityViaLoader implements ViaPlatformLoader {
 
         int pingInterval = ((VelocityViaConfig) Via.getPlatform().getConf()).getVelocityPingInterval();
         if (pingInterval > 0) {
-            Via.getPlatform().runRepeatingSync(
-                    new ProtocolDetectorService(),
+            Via.getPlatform().runRepeatingAsync(
+                    () -> Via.proxyPlatform().protocolDetectorService().probeAllServers(),
                     pingInterval * 20L);
         }
     }
